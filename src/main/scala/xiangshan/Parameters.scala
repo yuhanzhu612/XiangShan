@@ -117,7 +117,7 @@ case class XSCoreParameters
   ),
   L2Size: Int = 512 * 1024, // 512KB
   L2NWays: Int = 8,
-  useIdealPTW: Boolean = false,
+  useIdealPTW: Boolean = true,
   useFakePTW: Boolean = false,
   useFakeDCache: Boolean = false,
   useFakeL1plusCache: Boolean = false,
