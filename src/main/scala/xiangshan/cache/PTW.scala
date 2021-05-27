@@ -1294,7 +1294,7 @@ class FakePTW()(implicit p: Parameters) extends XSModule with HasPtwConst {
     val level = helper.io.level
     val pf = helper.io.pf
 
-    io.tlb(i).resp.valid := RegNext(io.tlb(i).req(0).valid)
+    io.tlb(i).resp.valid := RegNext(io.tlb(i).req(0).valid && !io.sfence.valid)
     assert(!io.tlb(i).resp.valid || io.tlb(i).resp.ready)
     io.tlb(i).resp.bits.entry.tag := RegNext(io.tlb(i).req(0).bits.vpn)
     io.tlb(i).resp.bits.entry.ppn := pte.ppn
