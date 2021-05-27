@@ -1304,20 +1304,66 @@ class FakePTW()(implicit p: Parameters) extends XSModule with HasPtwConst {
   }
 }
 
+/** ptw that always hit: ideal prefetcher?
+  * input arbiter +
+  * 3 cycle latency:
+  * 0: read sram - 1: get sram data and store - 2: send data out
+  * two RegNext
+  **/
+class IdealPTW()(implicit p: Parameters) extends XSModule with HasPtwConst {
+  val io = IO(new PtwIO)
+
+  val latency = 2
+
+  val arb = Module(new Arbiter(io.tlb(0).req(0).bits.cloneType, PtwWidth))
+  arb.io.in <> io.tlb.map(_.req(0))
+  arb.io.out.ready := true.B // always true
+
+  val helper = Module(new PTEHelper())
+  helper.io.clock := clock
+  helper.io.enable := arb.io.out.valid
+  helper.io.satp := io.csr.satp.ppn
+  helper.io.vpn := arb.io.out.bits.vpn
+  val pte = helper.io.pte.asTypeOf(new PteBundle)
+  val level = helper.io.level
+  val pf = helper.io.pf
+
+  for (i <- 0 until PtwWidth) {
+    val resp = Reg(Valid(io.tlb(0).resp.bits.cloneType))
+    resp.valid := RegNext(i.U === arb.io.chosen && arb.io.out.valid && !io.sfence.valid, init = false.B) && !io.sfence.valid
+    resp.bits.entry.tag := RegNext(io.tlb(i).req(0).bits.vpn)
+    resp.bits.entry.ppn := pte.ppn
+    resp.bits.entry.perm.map(_ := pte.getPerm())
+    resp.bits.entry.level.map(_ := level)
+    resp.bits.pf := pf
+
+    io.tlb(i).resp.valid := resp.valid
+    io.tlb(i).resp.bits := resp.bits
+  }
+}
+
 class PTWWrapper()(implicit p: Parameters) extends LazyModule with HasDCacheParameters {
-  val node = if (!useFakePTW) TLIdentityNode() else null
-  val ptw = if (!useFakePTW) LazyModule(new PTW()) else null
-  if (!useFakePTW) {
+  val node = if (!(useFakePTW || useIdealPTW)) TLIdentityNode() else null
+  val ptw = if (!(useFakePTW || useIdealPTW)) LazyModule(new PTW()) else null
+  if (!(useFakePTW || useIdealPTW)) {
     node := ptw.node
   }
+
+  require(!(useIdealPTW && useFakePTW))
 
   lazy val module = new LazyModuleImp(this) {
     val io = IO(new PtwIO)
     if (useFakePTW) {
+      println("[PTW]: use fake ptw")
       val fake_ptw = Module(new FakePTW())
       io <> fake_ptw.io
+    } else if (useIdealPTW) {
+      println("[PTW]: use ideal ptw")
+      val ideal_ptw = Module(new IdealPTW())
+      io <> ideal_ptw.io
     }
     else {
+      println("[PTW]: use true ptw")
       io <> ptw.module.io
     }
   }

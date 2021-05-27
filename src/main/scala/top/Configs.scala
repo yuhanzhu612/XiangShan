@@ -91,7 +91,8 @@ class MinimalSimConfig(n: Int = 1) extends Config(
     case SoCParamsKey => up(SoCParamsKey).copy(
       cores = up(SoCParamsKey).cores.map(_.copy(
         useFakeDCache = true,
-        useFakePTW = true,
+        // useFakePTW = true,
+        useIdealPTW = true,
         useFakeL1plusCache = true,
       )),
       useFakeL3Cache = true

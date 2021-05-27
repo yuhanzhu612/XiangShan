@@ -117,6 +117,7 @@ case class XSCoreParameters
   ),
   L2Size: Int = 512 * 1024, // 512KB
   L2NWays: Int = 8,
+  useIdealPTW: Boolean = false,
   useFakePTW: Boolean = false,
   useFakeDCache: Boolean = false,
   useFakeL1plusCache: Boolean = false,
@@ -244,11 +245,12 @@ trait HasXSParameter {
   // cache hierarchy configurations
   val l1BusDataWidth = 256
 
-  val useFakeDCache = coreParams.useFakeDCache
+  val useIdealPTW = coreParams.useIdealPTW
   val useFakePTW = coreParams.useFakePTW
+  val useFakeDCache = coreParams.useFakeDCache
   val useFakeL1plusCache = coreParams.useFakeL1plusCache
   // L2 configurations
-  val useFakeL2Cache = useFakeDCache && useFakePTW && useFakeL1plusCache || coreParams.useFakeL2Cache
+  val useFakeL2Cache = useFakeDCache && (useFakePTW || useIdealPTW) && useFakeL1plusCache || coreParams.useFakeL2Cache
   val L1BusWidth = 256
   val L2Size = coreParams.L2Size
   val L2BlockSize = 64
@@ -293,8 +295,8 @@ trait HasXSParameter {
       blockBytes = L2BlockSize,
       nEntries = dcacheParameters.nMissEntries * 2 // TODO: this is too large
     ),
-  )  
-  
+  )
+
   // load violation predict
   val ResetTimeMax2Pow = 20 //1078576
   val ResetTimeMin2Pow = 10 //1024

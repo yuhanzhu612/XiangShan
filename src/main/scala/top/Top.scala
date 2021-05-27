@@ -59,7 +59,7 @@ class XSCoreWithL2()(implicit p: Parameters) extends LazyModule
   if (!useFakeL1plusCache) {
     l2xbar := TLBuffer() := core.l1pluscache.clientNode
   }
-  if (!useFakePTW) {
+  if (!(useFakePTW || useIdealPTW)) {
     l2xbar := TLBuffer() := core.ptw.node
   }
   l2xbar := TLBuffer() := l2prefetcher.clientNode
@@ -305,7 +305,7 @@ class XSTopWithoutDMA()(implicit p: Parameters) extends BaseXSSoc()
   }
   plic.intnode := beu.intNode
   plic.intnode := plicSource.sourceNode
-  
+
   plic.node := peripheralXbar
 
   val l3cache = if (useFakeL3Cache) null else LazyModule(new InclusiveCache(
