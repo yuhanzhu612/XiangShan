@@ -26,7 +26,8 @@ jobs:
         run: |
           python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --build \
             --dramsim3 /home/ci-runner/xsenv/DRAMsim3            \
-            --disable-log --with-dramsim3 --threads 16
+            --disable-log --with-dramsim3 --threads 8 --trace
+          cp $GITHUB_WORKSPACE/build/emu /home/zzf/emu/ci-$GITHUB_SHA
       - name: SPEC06 Test - mcf
         run: |
           python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --threads 16 --max-instr 5000000 --numa --ci mcf 2> perf.log
