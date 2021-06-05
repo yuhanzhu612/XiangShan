@@ -479,7 +479,7 @@ class TLB(Width: Int, isDtlb: Boolean)(implicit p: Parameters) extends TlbModule
     assert(!multiHit, "multiple hit happens")
 
     // if miss, send ptw req
-    io.ptw.req(i).valid := validReg && miss && !io.ptw.resp.valid // maybe long delay
+    io.ptw.req(i).valid := validReg && miss
     io.ptw.req(i).bits.vpn := reqAddrReg.vpn
 
     // TODO: MMIO check

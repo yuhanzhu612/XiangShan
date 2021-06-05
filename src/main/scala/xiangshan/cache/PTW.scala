@@ -513,11 +513,18 @@ class PTWRepeater(implicit p: Parameters) extends XSModule with HasPtwConst {
   })
 
   val (tlb, ptw, sfence) = (io.tlb, io.ptw, RegNext(io.sfence.valid))
-  val req = RegEnable(tlb.req(0).bits, tlb.req(0).fire())
   val resp = RegEnable(ptw.resp.bits, ptw.resp.fire())
-  val haveOne = BoolStopWatch(tlb.req(0).fire(), tlb.resp.fire() || sfence)
-  val sent = BoolStopWatch(ptw.req(0).fire(), tlb.req(0).fire() || sfence)
-  val recv = BoolStopWatch(ptw.resp.fire(), tlb.req(0).fire() || sfence)
+  val resp_latch = RegEnable(resp, tlb.resp.valid)
+  val resp_latch_valid = RegNext(tlb.resp.valid, init = false.B)
+  def mergeIt(vpn: UInt): Bool = {
+    (resp_latch.entry.hit(vpn) && resp_latch_valid)
+  }
+  val tlb_req_fire = tlb.req(0).valid && tlb.req(0).ready && !mergeIt(tlb.req(0).bits.vpn)
+
+  val req = RegEnable(tlb.req(0).bits, tlb_req_fire)
+  val haveOne = BoolStopWatch(tlb_req_fire, tlb.resp.fire() || sfence)
+  val sent = BoolStopWatch(ptw.req(0).fire(), tlb_req_fire || sfence)
+  val recv = BoolStopWatch(ptw.resp.fire(), tlb_req_fire || sfence)
 
   tlb.req(0).ready := !haveOne
   ptw.req(0).valid := haveOne && !sent
@@ -528,7 +535,7 @@ class PTWRepeater(implicit p: Parameters) extends XSModule with HasPtwConst {
   ptw.resp.ready := !recv
 
   XSPerfAccumulate("req_count", ptw.req(0).fire())
-  XSPerfAccumulate("tlb_req_cycle", BoolStopWatch(tlb.req(0).fire(), tlb.resp.fire() || sfence))
+  XSPerfAccumulate("tlb_req_cycle", BoolStopWatch(tlb_req_fire, tlb.resp.fire() || sfence))
   XSPerfAccumulate("ptw_req_cycle", BoolStopWatch(ptw.req(0).fire(), ptw.resp.fire() || sfence))
 
   XSDebug(haveOne, p"haveOne:${haveOne} sent:${sent} recv:${recv} sfence:${sfence} req:${req} resp:${resp}")
@@ -561,6 +568,8 @@ class PTWFilter(Width: Int, Size: Int)(implicit p: Parameters) extends XSModule 
   val sfence = RegNext(io.sfence)
   val ptwResp = RegEnable(io.ptw.resp.bits, io.ptw.resp.fire())
   val ptwResp_valid = RegNext(io.ptw.resp.valid, init = false.B)
+  val resp_latch = RegEnable(ptwResp, ptwResp_valid)
+  val resp_latch_valid = RegNext(ptwResp_valid, init = false.B)
   val reqs = filter(io.tlb.req)
 
   var enqPtr_next = WireInit(deqPtr)
@@ -637,7 +646,9 @@ class PTWFilter(Width: Int, Size: Int)(implicit p: Parameters) extends XSModule 
     Cat((vpn ++ reqs.take(index).map(_.bits.vpn))
       .zip(v ++ reqs.take(index).map(_.valid))
       .map{case (pi, vi) => vi && pi === vpnReq}
-    ).orR || (ptwResp_valid && ptwResp.entry.hit(vpnReq))
+    ).orR ||
+    (ptwResp_valid && ptwResp.entry.hit(vpnReq)) ||
+    (resp_latch_valid && resp_latch.entry.hit(vpnReq))
   }
 
   def filter(tlbReq: Vec[DecoupledIO[PtwReq]]) = {
