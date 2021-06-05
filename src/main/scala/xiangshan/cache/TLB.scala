@@ -474,6 +474,14 @@ class TLB(Width: Int, isDtlb: Boolean)(implicit p: Parameters) extends TlbModule
       resp(i).bits.excp.af.instr := Mux(TlbCmd.isAtom(cmdReg), false.B, !PMAMode.execute(pmaMode))
     }
 
+    // multiHit Check, should not have duplicate terms
+    val multiHit = ~(PopCount(hitVec) === 0.U || PopCount(hitVec) === 1.U)
+    assert(!multiHit, "multiple hit happens")
+
+    // if miss, send ptw req
+    io.ptw.req(i).valid := validReg && miss && !io.ptw.resp.valid // maybe long delay
+    io.ptw.req(i).bits.vpn := reqAddrReg.vpn
+
     // TODO: MMIO check
 
     (hit, miss, hitVec, validReg)
@@ -485,10 +493,6 @@ class TLB(Width: Int, isDtlb: Boolean)(implicit p: Parameters) extends TlbModule
   val hitVecVec = readResult.map(res => res._3)
   val validRegVec = readResult.map(res => res._4)
 
-  for (i <- 0 until Width) {
-    io.ptw.req(i).valid := validRegVec(i) && missVec(i) && !RegNext(refill)
-    io.ptw.req(i).bits.vpn := RegNext(reqAddr(i).vpn)
-  }
   io.ptw.resp.ready := true.B
 
   // val tooManyPf = PopCount(pf) > 5.U
