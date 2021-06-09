@@ -21,21 +21,37 @@ typedef union PageTableEntry {
 #define VPNi(vpn, i) (((vpn) >> (18 - 9 * (i))) & 0x1ff)
 
 extern "C" uint8_t pte_helper(uint64_t satp, uint64_t vpn, uint64_t *pte, uint8_t *level) {
+// #define PTW_DEBUG
   uint64_t pg_base = satp << 12, pte_addr;
   PTE *pte_p = (PTE *)pte;
+#ifdef PTW_DEBUG
+  printf("[PTE_HELPER] satp:%016lx vpn:%016lx\n", satp, vpn);
+#endif
   for (*level = 0; *level < 3; (*level)++) {
     pte_addr = pg_base + VPNi(vpn, *level) * sizeof(uint64_t);
     pte_p->val = pmem_read(pte_addr);
+#ifdef PTW_DEBUG
+  printf("[PTE_HELPER] level:%d addr:%016lx pte:%016lx\n", *level, pte_addr, pte_p->val);
+#endif
     pg_base = pte_p->ppn << 12;
     // pf
     if (!pte_p->v) {
+#ifdef PTW_DEBUG
+  printf("[PTE_HELPER] pf not valid\n");
+#endif
       return 1;
     }
     // leaf pte
-    if (pte_p->r || pte_p->x) {
+    if (pte_p->r || pte_p->x || pte_p->w) {
+#ifdef PTW_DEBUG
+  printf("[PTE_HELPER] find pte\n");
+#endif
       return 0;
     }
   }
+#ifdef PTW_DEBUG
+  printf("[PTE_HELPER] walker end but no pte found\n");
+#endif
   return 1;
 }
 
