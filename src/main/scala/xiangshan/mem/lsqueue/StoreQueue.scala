@@ -282,8 +282,8 @@ class StoreQueue(implicit p: Parameters) extends XSModule with HasDCacheParamete
     io.forward(i).forwardData := dataModule.io.forwardData(i)
 
     // If addr match, data not ready, mark it as dataInvalid
-    // load_s1: generate dataInvalid in load_s1 to set fastUop to 
-    io.forward(i).dataInvalidFast := (addrValidVec.asUInt & ~dataValidVec.asUInt & paddrModule.io.forwardMmask(i).asUInt & needForward).orR 
+    // load_s1: generate dataInvalid in load_s1 to set fastUop to
+    io.forward(i).dataInvalidFast := (addrValidVec.asUInt & ~dataValidVec.asUInt & paddrModule.io.forwardMmask(i).asUInt & needForward).orR
     // load_s2
     io.forward(i).dataInvalid := RegNext(io.forward(i).dataInvalidFast)
   }
@@ -405,7 +405,7 @@ class StoreQueue(implicit p: Parameters) extends XSModule with HasDCacheParamete
   when (io.sbuffer(1).fire()) {
     assert(io.sbuffer(0).fire())
   }
-  if (useFakeDCache) {
+  if (useFakeDCache || useFakePTW || useFakeL1plusCache || useIdealPTW) {
     for (i <- 0 until StorePipelineWidth) {
       val ptr = deqPtrExt(i).value
       val fakeRAM = Module(new RAMHelper(64L * 1024 * 1024 * 1024))
