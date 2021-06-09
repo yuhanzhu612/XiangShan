@@ -37,7 +37,7 @@ class StoreUnit_S0(implicit p: Parameters) extends XSModule {
   io.dtlbReq.bits.debug.isFirstIssue := io.isFirstIssue
 
   io.out.bits := DontCare
-  io.out.bits.vaddr := saddr
+  io.out.bits.vaddr := SignExt(io.in.bits.uop.ctrl.imm(11,0), XLEN) + io.in.bits.src(0) // saddr
 
   // Now data use its own io
   // io.out.bits.data := genWdata(io.in.bits.src(1), io.in.bits.uop.ctrl.fuOpType(1,0))
@@ -75,10 +75,11 @@ class StoreUnit_S1(implicit p: Parameters) extends XSModule {
     val rsFeedback = ValidIO(new RSFeedback)
   })
 
+  val vaUpperBitsFault = !(io.in.bits.vaddr(XLEN-1, VAddrBits-1) === 0.U || io.in.bits.vaddr(XLEN-1, VAddrBits-1) === ((-1).asSInt).asUInt)
   val s1_paddr = io.dtlbResp.bits.paddr
   val s1_tlb_miss = io.dtlbResp.bits.miss
   val s1_mmio = io.dtlbResp.bits.mmio
-  val s1_exception = selectStore(io.out.bits.uop.cf.exceptionVec, false).asUInt.orR
+  val s1_exception = selectStore(io.out.bits.uop.cf.exceptionVec, false).asUInt.orR || vaUpperBitsFault
 
   io.in.ready := true.B
 
@@ -99,12 +100,13 @@ class StoreUnit_S1(implicit p: Parameters) extends XSModule {
 
   // get paddr from dtlb, check if rollback is needed
   // writeback store inst to lsq
+
   io.lsq.valid := io.in.valid && !s1_tlb_miss
   io.lsq.bits := io.in.bits
   io.lsq.bits.paddr := s1_paddr
   io.lsq.bits.miss := false.B
   io.lsq.bits.mmio := s1_mmio && !s1_exception
-  io.lsq.bits.uop.cf.exceptionVec(storePageFault) := io.dtlbResp.bits.excp.pf.st
+  io.lsq.bits.uop.cf.exceptionVec(storePageFault) := io.dtlbResp.bits.excp.pf.st || vaUpperBitsFault
   io.lsq.bits.uop.cf.exceptionVec(storeAccessFault) := io.dtlbResp.bits.excp.af.st
 
   // mmio inst with exception will be writebacked immediately

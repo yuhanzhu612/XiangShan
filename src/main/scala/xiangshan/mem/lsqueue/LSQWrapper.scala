@@ -13,7 +13,7 @@ import xiangshan.backend.roq.RoqLsqIO
 class ExceptionAddrIO(implicit p: Parameters) extends XSBundle {
   val lsIdx = Input(new LSIdx)
   val isStore = Input(Bool())
-  val vaddr = Output(UInt(VAddrBits.W))
+  val vaddr = Output(UInt(XLEN.W))
 }
 
 class FwdEntry extends Bundle {

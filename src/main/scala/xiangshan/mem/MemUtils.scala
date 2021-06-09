@@ -33,7 +33,7 @@ object genWdata {
 }
 
 class LsPipelineBundle(implicit p: Parameters) extends XSBundle {
-  val vaddr = UInt(VAddrBits.W)
+  val vaddr = UInt(XLEN.W)
   val paddr = UInt(PAddrBits.W)
   val func = UInt(6.W) //fixme???
   val mask = UInt(8.W)

@@ -793,7 +793,7 @@ class CSR(implicit p: Parameters) extends FunctionUnit with HasCSRConst
   )
 
   // mtval write logic
-  val memExceptionAddr = SignExt(csrio.memExceptionVAddr, XLEN)
+  val memExceptionAddr = csrio.memExceptionVAddr
   when (hasInstrPageFault || hasLoadPageFault || hasStorePageFault) {
     val tval = Mux(
       hasInstrPageFault,

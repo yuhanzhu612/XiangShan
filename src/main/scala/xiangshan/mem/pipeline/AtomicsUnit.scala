@@ -20,7 +20,7 @@ class AtomicsUnit(implicit p: Parameters) extends XSModule with MemoryOpConstant
     val rsFeedback   = ValidIO(new RSFeedback)
     val redirect      = Flipped(ValidIO(new Redirect))
     val flush      = Input(Bool())
-    val exceptionAddr = ValidIO(UInt(VAddrBits.W))
+    val exceptionAddr = ValidIO(UInt(XLEN.W))
   })
 
   //-------------------------------------------------------
@@ -117,9 +117,10 @@ class AtomicsUnit(implicit p: Parameters) extends XSModule with MemoryOpConstant
         "b10".U   -> (in.src(0)(1,0) === 0.U), //w
         "b11".U   -> (in.src(0)(2,0) === 0.U)  //d
       ))
+      val addrUpperBitsOK = in.src(0)(XLEN-1, VAddrBits-1) === 0.U || in.src(0)(XLEN-1, VAddrBits-1) === ((-1).asSInt).asUInt
       exceptionVec(storeAddrMisaligned) := !addrAligned
-      exceptionVec(storePageFault)      := io.dtlb.resp.bits.excp.pf.st
-      exceptionVec(loadPageFault)       := io.dtlb.resp.bits.excp.pf.ld
+      exceptionVec(storePageFault)      := io.dtlb.resp.bits.excp.pf.st || !addrUpperBitsOK
+      exceptionVec(loadPageFault)       := io.dtlb.resp.bits.excp.pf.ld || !addrUpperBitsOK
       exceptionVec(storeAccessFault)    := io.dtlb.resp.bits.excp.af.st
       exceptionVec(loadAccessFault)     := io.dtlb.resp.bits.excp.af.ld
       val exception = !addrAligned ||

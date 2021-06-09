@@ -91,7 +91,7 @@ class LoadQueue(implicit p: Parameters) extends XSModule
   // val data = Reg(Vec(LoadQueueSize, new LsRoqEntry))
   val dataModule = Module(new LoadQueueData(LoadQueueSize, wbNumRead = LoadPipelineWidth, wbNumWrite = LoadPipelineWidth))
   dataModule.io := DontCare
-  val vaddrModule = Module(new SyncDataModuleTemplate(UInt(VAddrBits.W), LoadQueueSize, numRead = 1, numWrite = LoadPipelineWidth))
+  val vaddrModule = Module(new SyncDataModuleTemplate(UInt(XLEN.W), LoadQueueSize, numRead = 1, numWrite = LoadPipelineWidth))
   vaddrModule.io := DontCare
   val allocated = RegInit(VecInit(List.fill(LoadQueueSize)(false.B))) // lq entry has been allocated
   val datavalid = RegInit(VecInit(List.fill(LoadQueueSize)(false.B))) // data is valid
@@ -180,7 +180,7 @@ class LoadQueue(implicit p: Parameters) extends XSModule
         io.loadIn(i).bits.forwardMask.asUInt,
         io.loadIn(i).bits.mmio
       )}
-      datavalid(loadWbIndex) := (!io.loadIn(i).bits.miss || io.loadDataForwarded(i)) && 
+      datavalid(loadWbIndex) := (!io.loadIn(i).bits.miss || io.loadDataForwarded(i)) &&
         !io.loadIn(i).bits.mmio && // mmio data is not valid until we finished uncache access
         !io.needReplayFromRS(i) // do not writeback if that inst will be resend from rs
       writebacked(loadWbIndex) := !io.loadIn(i).bits.miss && !io.loadIn(i).bits.mmio
@@ -533,7 +533,7 @@ class LoadQueue(implicit p: Parameters) extends XSModule
   // check if rollback request is still valid in parallel
   val rollbackValidVecChecked = Wire(Vec(3, Bool()))
   for(((v, uop), idx) <- rollbackValidVec.zip(rollbackUopExtVec.map(i => i.uop)).zipWithIndex) {
-    rollbackValidVecChecked(idx) := v && 
+    rollbackValidVecChecked(idx) := v &&
       (!lastCycleRedirect.valid || isBefore(uop.roqIdx, lastCycleRedirect.bits.roqIdx)) &&
       (!lastlastCycleRedirect.valid || isBefore(uop.roqIdx, lastlastCycleRedirect.bits.roqIdx))
   }
@@ -629,7 +629,7 @@ class LoadQueue(implicit p: Parameters) extends XSModule
 
   // Read vaddr for mem exception
   // no inst will be commited 1 cycle before tval update
-  vaddrModule.io.raddr(0) := (deqPtrExt + commitCount).value 
+  vaddrModule.io.raddr(0) := (deqPtrExt + commitCount).value
   io.exceptionAddr.vaddr := vaddrModule.io.rdata(0)
 
   // misprediction recovery / exception redirect

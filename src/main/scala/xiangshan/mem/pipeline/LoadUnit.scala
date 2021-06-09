@@ -68,7 +68,7 @@ class LoadUnit_S0(implicit p: Parameters) extends XSModule {
   io.out.valid := io.in.valid && io.dcacheReq.ready
 
   io.out.bits := DontCare
-  io.out.bits.vaddr := s0_vaddr
+  io.out.bits.vaddr := SignExt(s0_uop.ctrl.imm(11,0), XLEN) + io.in.bits.src(0) // s0_vaddr
   io.out.bits.mask := s0_mask
   io.out.bits.uop := s0_uop
   io.out.bits.uop.cf.exceptionVec(loadAddrMisaligned) := !addrAligned
@@ -133,11 +133,12 @@ class LoadUnit_S1(implicit p: Parameters) extends XSModule {
   io.lsq.mask := s1_mask
   io.lsq.pc := s1_uop.cf.pc // FIXME: remove it
 
+  val vaUpperBitsFault = !(io.in.bits.vaddr(XLEN-1, VAddrBits-1) === 0.U || io.in.bits.vaddr(XLEN-1, VAddrBits-1) === ((-1).asSInt).asUInt)
   io.out.valid := io.in.valid// && !s1_tlb_miss
   io.out.bits.paddr := s1_paddr
   io.out.bits.mmio := s1_mmio && !s1_exception
   io.out.bits.tlbMiss := s1_tlb_miss
-  io.out.bits.uop.cf.exceptionVec(loadPageFault) := io.dtlbResp.bits.excp.pf.ld
+  io.out.bits.uop.cf.exceptionVec(loadPageFault) := io.dtlbResp.bits.excp.pf.ld || vaUpperBitsFault
   io.out.bits.uop.cf.exceptionVec(loadAccessFault) := io.dtlbResp.bits.excp.af.ld
   io.out.bits.ptwBack := io.dtlbResp.bits.ptwBack
   io.out.bits.rsIdx := io.in.bits.rsIdx
@@ -183,14 +184,14 @@ class LoadUnit_S2(implicit p: Parameters) extends XSModule with HasLoadHelper {
   io.rsFeedback.bits.hit := !s2_tlb_miss && (!s2_cache_replay || s2_mmio || s2_exception) && !s2_data_invalid
   io.rsFeedback.bits.rsIdx := io.in.bits.rsIdx
   io.rsFeedback.bits.flushState := io.in.bits.ptwBack
-  io.rsFeedback.bits.sourceType := Mux(s2_tlb_miss, RSFeedbackType.tlbMiss, 
+  io.rsFeedback.bits.sourceType := Mux(s2_tlb_miss, RSFeedbackType.tlbMiss,
     Mux(io.lsq.dataInvalid,
       RSFeedbackType.dataInvalid,
       RSFeedbackType.mshrFull
     )
   )
 
-  // s2_cache_replay is quite slow to generate, send it separately to LQ 
+  // s2_cache_replay is quite slow to generate, send it separately to LQ
   io.needReplayFromRS := s2_cache_replay
 
   // merge forward result
@@ -324,7 +325,7 @@ class LoadUnit(implicit p: Parameters) extends XSModule with HasLoadHelper {
   // load_s2.io.dcacheResp.bits.data := Mux1H(RegNext(io.dcache.s1_hit_way), RegNext(io.dcache.s1_data))
   // assert(load_s2.io.dcacheResp.bits.data === io.dcache.resp.bits.data)
 
-  io.fastUop.valid := io.dcache.s1_hit_way.orR && !io.dcache.s1_disable_fast_wakeup && load_s1.io.in.valid && 
+  io.fastUop.valid := io.dcache.s1_hit_way.orR && !io.dcache.s1_disable_fast_wakeup && load_s1.io.in.valid &&
     !load_s1.io.dcacheKill && !io.lsq.forward.dataInvalidFast
   io.fastUop.bits := load_s1.io.out.bits.uop
 

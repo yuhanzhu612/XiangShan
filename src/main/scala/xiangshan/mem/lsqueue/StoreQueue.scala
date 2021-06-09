@@ -64,7 +64,7 @@ class StoreQueue(implicit p: Parameters) extends XSModule with HasDCacheParamete
   dataModule.io := DontCare
   val paddrModule = Module(new SQPaddrModule(StoreQueueSize, numRead = StorePipelineWidth, numWrite = StorePipelineWidth, numForward = StorePipelineWidth))
   paddrModule.io := DontCare
-  val vaddrModule = Module(new SyncDataModuleTemplate(UInt(VAddrBits.W), StoreQueueSize, numRead = 1, numWrite = StorePipelineWidth))
+  val vaddrModule = Module(new SyncDataModuleTemplate(UInt(XLEN.W), StoreQueueSize, numRead = 1, numWrite = StorePipelineWidth))
   vaddrModule.io := DontCare
 
   // state & misc
