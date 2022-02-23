@@ -28,14 +28,18 @@ class CacheWarmup(implicit p: Parameters) extends Module {
   val l_soc = LazyModule(new CacheSubsystem())
   val soc = Module(l_soc.module)
 
-  val l_simAXIMem = LazyModule(new AXI4RAMWrapper(
-    l_soc.memAXI4SlaveNode, 8L * 1024 * 1024 * 1024, useBlackBox = true
-  ))
-  val simAXIMem = Module(l_simAXIMem.module)
-  l_simAXIMem.io_axi4 <> l_soc.memoryPort
+  val axi4MemPort = IO(l_soc.memoryPort.cloneType)
+  axi4MemPort <> l_soc.memoryPort
 
-  soc.io.clock := clock.asBool
-  soc.io.reset := reset.asBool
+  l_soc.above_l2_ios.zipWithIndex.foreach {
+    case (above_l2_io, i) => {
+      val outer_port = IO(Flipped(above_l2_io.cloneType)).suggestName(s"master_port_$i")
+      outer_port <> above_l2_io
+    }
+  }
+
+  // soc.io.clock := clock.asBool
+  // soc.io.reset := reset.asBool
 
   val io = IO(new Bundle(){
   })
