@@ -60,7 +60,9 @@ class CacheSubsystem()(implicit p: Parameters) extends LazyModule() {
 
   val l3Out = TLTempNode()
 
-  bankedNode :*= TLLogger("MEM_L3") :*= l3Out
+  bankedNode :*=
+    // TLLogger("MEM_L3") :*=
+    l3Out
 
   val memoryPort = InModuleBody {
     memAXI4SlaveNode.makeIOs()
@@ -81,7 +83,7 @@ class CacheSubsystem()(implicit p: Parameters) extends LazyModule() {
   l3Out :*= l3cache.node :*= TLBuffer() :*= l3BankedXBar
 
   l3BankedXBar :=*
-    TLLogger(s"L3_L2") :=*
+    // TLLogger(s"L3_L2") :=*
     TLBuffer() :=
     l2Tol3
 
