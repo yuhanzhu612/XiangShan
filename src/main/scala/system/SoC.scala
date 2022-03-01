@@ -304,7 +304,7 @@ class SoCMisc()(implicit p: Parameters) extends BaseSoC
     plicSource.module.in := ext_intrs_wire.asBools
     pma.module.io <> cacheable_check
 
-    val freq = 100
+    val freq = 10
     val cnt = RegInit(freq.U)
     val tick = cnt === 0.U
     cnt := Mux(tick, freq.U, cnt - 1.U)
