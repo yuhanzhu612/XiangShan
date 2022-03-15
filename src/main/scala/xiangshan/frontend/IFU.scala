@@ -157,10 +157,10 @@ class NewIFU(implicit p: Parameters) extends XSModule
 
   fromFtq.req.ready := toICache(0).ready && toICache(1).ready && f2_ready && GTimer() > 500.U
 
-  toICache(0).valid       := fromFtq.req.valid //&& !f0_flush
+  toICache(0).valid       := fromFtq.req.valid
   toICache(0).bits.vaddr  := fromFtq.req.bits.startAddr
-  toICache(1).valid       := fromFtq.req.valid && f0_doubleLine //&& !f0_flush
-  toICache(1).bits.vaddr  := fromFtq.req.bits.nextlineStart//fromFtq.req.bits.startAddr + (PredictWidth * 2).U //TODO: timing critical
+  toICache(1).valid       := fromFtq.req.valid && f0_doubleLine
+  toICache(1).bits.vaddr  := fromFtq.req.bits.nextlineStart
 
   /** <PERF> f0 fetch bubble */
 
@@ -191,7 +191,6 @@ class NewIFU(implicit p: Parameters) extends XSModule
   f1_ready := f2_ready || !f1_valid
 
   from_bpu_f1_flush := fromFtq.flushFromBpu.shouldFlushByStage3(f1_ftq_req.ftqIdx) && f1_valid
-  // from_bpu_f1_flush := false.B
 
   when(f1_flush)                  {f1_valid  := false.B}
   .elsewhen(f0_fire && !f0_flush) {f1_valid  := true.B}
@@ -239,7 +238,6 @@ class NewIFU(implicit p: Parameters) extends XSModule
   .elsewhen(f1_fire && !f1_flush) {f2_valid := true.B }
   .elsewhen(f2_fire)              {f2_valid := false.B}
 
-  // val f2_cache_response_data = ResultHoldBypass(valid = f2_icache_all_resp_wire, data = VecInit(fromICache.map(_.bits.readData)))
   val f2_cache_response_data = VecInit(fromICache.map(_.bits.readData))
 
 
@@ -326,7 +324,6 @@ class NewIFU(implicit p: Parameters) extends XSModule
 
   val f3_valid          = RegInit(false.B)
   val f3_ftq_req        = RegEnable(next = f2_ftq_req,    enable=f2_fire)
-  // val f3_situation      = RegEnable(next = f2_situation,  enable=f2_fire)
   val f3_doubleLine     = RegEnable(next = f2_doubleLine, enable=f2_fire)
   val f3_fire           = io.toIbuffer.fire()
 
@@ -363,6 +360,7 @@ class NewIFU(implicit p: Parameters) extends XSModule
   val mmio_is_RVC     = RegInit(false.B)
   val mmio_resend_addr =RegInit(0.U(PAddrBits.W))
   val mmio_resend_af  = RegInit(false.B)
+  val mmio_resend_pf  = RegInit(false.B)
 
   val m_idle :: m_sendReq :: m_waitResp :: m_sendTLB :: m_tlbResp :: m_sendPMP :: m_resendReq :: m_waitResendResp :: m_waitCommit :: m_commited :: Nil = Enum(10)
   val mmio_state = RegInit(m_idle)
@@ -396,8 +394,6 @@ class NewIFU(implicit p: Parameters) extends XSModule
 
   f3_ready := Mux(f3_req_is_mmio, io.toIbuffer.ready && f3_mmio_req_commit || !f3_valid , io.toIbuffer.ready || !f3_valid)
 
-  // when(fromUncache.fire())    {f3_mmio_data   :=  fromUncache.bits.data}
-
 
   switch(mmio_state){
     is(m_idle){
@@ -423,18 +419,24 @@ class NewIFU(implicit p: Parameters) extends XSModule
     }  
 
     is(m_sendTLB){
-          mmio_state :=  m_tlbResp
+      when(io.iTLBInter.req.valid && !io.iTLBInter.resp.bits.miss ){
+        mmio_state :=  m_tlbResp
+      }
     }
 
     is(m_tlbResp){
-          mmio_state :=  m_sendPMP
+          val tlbExept = io.iTLBInter.resp.bits.excp.pf.instr ||
+                         io.iTLBInter.resp.bits.excp.af.instr
+          mmio_state :=  Mux(tlbExept,m_waitCommit,m_sendPMP)
           mmio_resend_addr := io.iTLBInter.resp.bits.paddr
+          mmio_resend_af := mmio_resend_af || io.iTLBInter.resp.bits.excp.af.instr
+          mmio_resend_pf := mmio_resend_pf || io.iTLBInter.resp.bits.excp.pf.instr
     }
 
     is(m_sendPMP){
           val pmpExcpAF = io.pmp.resp.instr
           mmio_state :=  Mux(pmpExcpAF, m_waitCommit , m_resendReq)
-          mmio_resend_af := pmpExcpAF
+          mmio_resend_af := mmio_resend_af || pmpExcpAF
     }
 
     is(m_resendReq){
@@ -468,7 +470,8 @@ class NewIFU(implicit p: Parameters) extends XSModule
     mmio_is_RVC := false.B 
     mmio_resend_addr := 0.U 
     mmio_resend_af := false.B
-    f3_mmio_data.map(_ := 0.U) 
+    mmio_resend_pf := false.B
+    f3_mmio_data.map(_ := 0.U)
   }
 
   toUncache.valid     :=  ((mmio_state === m_sendReq) || (mmio_state === m_resendReq)) && f3_req_is_mmio
@@ -577,6 +580,7 @@ class NewIFU(implicit p: Parameters) extends XSModule
     io.toIbuffer.bits.pd(0).isRet   := isRet
 
     io.toIbuffer.bits.acf(0) := mmio_resend_af
+    io.toIbuffer.bits.ipf(0) := mmio_resend_pf
 
     io.toIbuffer.bits.enqEnable   := f3_mmio_range.asUInt
   }

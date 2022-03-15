@@ -81,6 +81,10 @@ class XSTop()(implicit p: Parameters) extends BaseXSSoc() with HasSoCParameter
     })))
   )
 
+  val moniter = LazyModule(new XSMoniter())
+
+  misc.moniterTLNode := moniter.clientNode
+
   for (i <- 0 until NumCores) {
     core_with_l2(i).clint_int_sink := misc.clint.intnode
     core_with_l2(i).plic_int_sink :*= misc.plic.intnode
@@ -120,10 +124,12 @@ class XSTop()(implicit p: Parameters) extends BaseXSSoc() with HasSoCParameter
     val dma = IO(Flipped(misc.dma.cloneType))
     val peripheral = IO(misc.peripheral.cloneType)
     val memory = IO(misc.memory.cloneType)
+    val moniterIO = IO(misc.moniterIO.cloneType)
 
     misc.dma <> dma
     peripheral <> misc.peripheral
     memory <> misc.memory
+    moniterIO <> misc.moniterIO
 
     val io = IO(new Bundle {
       val clock = Input(Bool())

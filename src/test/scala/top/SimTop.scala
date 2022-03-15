@@ -50,6 +50,18 @@ class SimTop(implicit p: Parameters) extends Module {
     l_simAXIMem.io_axi4 <> soc.memory
   }
 
+  soc.moniterIO <> DontCare
+  soc.moniterIO(0).aw.ready := true.B
+  soc.moniterIO(0).w.ready  := true.B
+
+  when(soc.moniterIO(0).aw.fire()){
+    printf("transform address: %x", soc.moniterIO(0).aw.bits.addr)
+  }
+
+  when(soc.moniterIO(0).w.fire()){
+    printf("transform data: %x", soc.moniterIO(0).w.bits.data)
+  }
+
   soc.io.clock := clock.asBool
   soc.io.reset := reset.asBool
   soc.io.extIntrs := simMMIO.io.interrupt.intrVec

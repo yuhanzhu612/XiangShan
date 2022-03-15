@@ -84,6 +84,7 @@ abstract class BaseSoC()(implicit p: Parameters) extends LazyModule with HasSoCP
   val peripheralXbar = TLXbar()
   val l3_xbar = TLXbar()
   val l3_banked_xbar = TLXbar()
+  val moniterTLNode = TLTempNode()
 }
 
 // We adapt the following three traits from rocket-chip.
@@ -177,6 +178,35 @@ trait HaveAXI4MemPort {
   }
 }
 
+trait HaveAXI4MoniterPort{ this: BaseSoC =>
+  val moniterRange = AddressSet(0x90000000L, 0x00000fffL)
+  val moniterAXINode = AXI4SlaveNode(Seq(AXI4SlavePortParameters(
+    Seq(AXI4SlaveParameters(
+      address = Seq(moniterRange),
+      regionType = RegionType.UNCACHED,
+      supportsRead = TransferSizes(1, 4),
+      supportsWrite = TransferSizes(1, 4),
+      interleavedId = Some(0)
+    )),
+    beatBytes = 4
+  )))
+
+  moniterAXINode :=
+    AXI4IdIndexer(idBits = 1) :=
+    AXI4Buffer() :=
+    AXI4Buffer() :=
+    AXI4Buffer() :=
+    AXI4Buffer() :=
+    AXI4UserYanker() :=
+    AXI4Deinterleaver(8) :=
+    TLToAXI4() :=
+    moniterTLNode
+
+  val moniterIO = InModuleBody {
+    moniterAXINode.makeIOs()
+  }
+}
+
 trait HaveAXI4PeripheralPort { this: BaseSoC =>
   // on-chip devices: 0x3800_0000 - 0x3fff_ffff 0x0000_0000 - 0x0000_0fff
   val onChipPeripheralRange = AddressSet(0x38000000L, 0x07ffffffL)
@@ -226,6 +256,7 @@ class SoCMisc()(implicit p: Parameters) extends BaseSoC
   with HaveAXI4PeripheralPort
   with PMAConst
   with HaveSlaveAXI4Port
+  with HaveAXI4MoniterPort
 {
   val peripheral_ports = Array.fill(NumCores) { TLTempNode() }
   val core_to_l3_ports = Array.fill(NumCores) { TLTempNode() }
