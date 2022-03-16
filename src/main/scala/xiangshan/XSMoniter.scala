@@ -2,37 +2,22 @@ package xiangshan
 
 import chipsalliance.rocketchip.config.Parameters
 import chisel3._
-import chisel3.util.DecoupledIO
+import chisel3.util._
 import freechips.rocketchip.diplomacy.{IdRange, LazyModule, LazyModuleImp}
 import freechips.rocketchip.tilelink.{TLClientNode, TLMasterParameters, TLMasterPortParameters}
 import xiangshan.frontend.icache.{HasICacheParameters, ICacheBundle, InsUncacheReq, InsUncacheResp, InstrUncacheImp}
 import utils._
 
-trait MoniterConf {
-  val cntWidth = 16
-  val idWidth  = 5
-}
-
-abstract class MoniterBundle extends Bundle with MoniterConf
-
-abstract class MoniterModule extends Module with MoniterConf
-
-
-class MoniterEvent extends MoniterBundle {
+class MoniterEventCnt extends MoniterBundle {
   val counter = UInt(cntWidth.W)
 }
 
-trait MoniterInter {
-  this : RawModule =>
-  // name, id, value
-  val moniterEvent: Seq[(String, Int, UInt)]
 
-  lazy val io_moniter: Vec[MoniterEvent] = IO(Output(Vec(moniterEvent.length, new MoniterEvent)))
-  def generateMoniterEvent()
+class MoniterEventReg extends MoniterBundle{
+  val couter = UInt(cntWidth.W)
 }
 
 class XSMoniter()(implicit p: Parameters) extends LazyModule
-  with MoniterConf
 {
 
   val clientParameters = TLMasterPortParameters.v1(
@@ -47,16 +32,25 @@ class XSMoniter()(implicit p: Parameters) extends LazyModule
 
 }
 
-class XSMoniterImp(outer: XSMoniter) extends LazyModuleImp(outer) {
-  //WIP: Demo for magic number transformation
-  val demoReg = RegInit(24.U(32.W))
+class XSMoniterImp(outer: XSMoniter) extends LazyModuleImp(outer)
+  with MoniterConf
+{
   val (bus, edge) = outer.clientNode.out.head
+
+  val io = IO(new Bundle{
+    val frontend_signals  = Input(new FrontendMoniter)
+    val commit_signals    = Input(new BackendCommitMoniter)
+    val wb_signals        = Input(new BackendWBMoniter)
+    val excpt_signals     = Input(new BackendExcptMoniter)
+  })
+
+  val registers = VecInit(Seq.fill(moniterCntNum)(RegInit(0.U.asTypeOf(new MoniterEventReg))))
 
   // assign default values to output signals
   bus.b.ready := false.B
   bus.c.valid := false.B
   bus.c.bits  := DontCare
-  bus.d.ready := false.B
+  bus.d.ready := true.B
   bus.e.valid := false.B
   bus.e.bits  := DontCare
 
@@ -66,16 +60,74 @@ class XSMoniterImp(outer: XSMoniter) extends LazyModuleImp(outer) {
   dontTouch(bus.a)
   dontTouch(bus.d)
 
-  val putMoniter = edge.Put(
-    fromSource = 0.U,
-    toAddress = 0x90000000L.U,
-    lgSize = 2.U,
-    data = demoReg)._2
 
-  when(GTimer() === 1500.U){
-    bus.a.valid := true.B
-    bus.a.bits := putMoniter
+//  def generateReq(in : BaseMoniterSignal) = {
+//    val putAddr = (moniterDDRBase + in.offset * 4).U
+//    val putData = in.data
+//    val sendCnt = RegInit(in.transferNum.U)
+//
+//    val m_idle :: m_transfer :: m_finish :: Nil = Enum(3)
+//    val state   = RegInit(m_idle)
+//
+//    when(in.valid && state === m_idle){
+//      state := m_transfer
+//    }
+//
+//    when(state === m_transfer){
+//      bus.a.valid := true.B
+//      bus.a.bits  := edge.Put(
+//        fromSource = 0.U,
+//        toAddress = putAddr + ((in.transferNum.U - sendCnt)<<2),
+//        lgSize = 4.U,
+//        data = putData(in.transferNum.U - sendCnt))._2
+//
+//      when(sendCnt === 0.U){
+//        state := m_finish
+//      }.elsewhen(bus.a.fire()){
+//        sendCnt := sendCnt - 1.U
+//      }
+//    }
+//
+//    when(state === m_finish){
+//      sendCnt := in.transferNum.U
+//      state := m_idle
+//    }
+//  }
+
+//  generateReq(io.excpt_signals)
+//  generateReq(io.wb_signals)
+//  generateReq(io.commit_signals)
+//  generateReq(io.frontend_signals)
+val putAddr = moniterDDRBase.U//(moniterDDRBase + in.offset * 4).U
+val putData = RegNext(io.frontend_signals.data)
+val sendCnt = RegInit(io.frontend_signals.transferNum.U)
+
+val m_idle :: m_transfer :: m_finish :: Nil = Enum(3)
+val state   = RegInit(m_idle)
+
+when(io.frontend_signals.valid && state === m_idle){
+  state := m_transfer
+}
+
+when(state === m_transfer){
+  bus.a.valid := true.B
+  bus.a.bits  := edge.Put(
+    fromSource = 0.U,
+    toAddress = putAddr + ((io.frontend_signals.transferNum.U - sendCnt)<<2),
+    lgSize = 4.U,
+    data = putData(io.frontend_signals.transferNum.U - sendCnt))._2
+
+  when(sendCnt === 0.U){
+    state := m_finish
+  }.elsewhen(bus.a.fire()){
+    sendCnt := sendCnt - 1.U
   }
+}
+
+when(state === m_finish){
+  sendCnt := io.frontend_signals.transferNum.U
+  state := m_idle
+}
 
 }
 

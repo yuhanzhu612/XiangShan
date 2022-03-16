@@ -20,8 +20,9 @@ import chisel3._
 import chisel3.util._
 import freechips.rocketchip.diplomacy.{LazyModule, LazyModuleImp}
 import utils._
+import xiangshan.ExceptionNO.{instrAccessFault, instrPageFault}
 import xiangshan._
-import xiangshan.backend.fu.{PFEvent, PMP, PMPChecker,PMPReqBundle}
+import xiangshan.backend.fu.{PFEvent, PMP, PMPChecker, PMPReqBundle}
 import xiangshan.cache.mmu._
 import xiangshan.frontend.icache._
 
@@ -175,4 +176,19 @@ class FrontendImp (outer: Frontend) extends LazyModuleImp(outer)
   val allPerfEvents = Seq(ifu, ibuffer, icache, ftq, bpu).flatMap(_.getPerf)
   override val perfEvents = HPerfMonitor(csrevents, allPerfEvents).getPerfEvents
   generatePerfEvent()
+
+  //for XSMoniter
+
+  lazy val io_moniter = IO(Output(new FrontendMoniter))
+
+  io_moniter.valid    :=  RegNext(ibuffer.io.out(0).fire())
+  val moniter_instr   =  RegNext(ibuffer.io.out(0).bits.instr)
+  val moniter_ftqIdx  =  RegNext(ibuffer.io.out(0).bits.ftqPtr.value)
+  val moniter_pf      =  RegNext(ibuffer.io.out(0).bits.exceptionVec(instrPageFault))
+  val moniter_af      =  RegNext(ibuffer.io.out(0).bits.exceptionVec(instrAccessFault))
+
+  io_moniter.data(0) := moniter_instr
+  io_moniter.data(1) := Cat(moniter_ftqIdx,moniter_pf,moniter_af )
+
+
 }

@@ -93,6 +93,7 @@ class XSTile()(implicit p: Parameters) extends LazyModule
   val debug_int_sink = core.debug_int_sink
   val beu_int_source = misc.beu.intNode
   val core_reset_sink = BundleBridgeSink(Some(() => Bool()))
+  val moniter = core.moniter.clientNode
 
   val l1d_to_l2_bufferOpt = coreParams.dcacheParametersOpt.map { _ =>
     val buffer = LazyModule(new TLBuffer)

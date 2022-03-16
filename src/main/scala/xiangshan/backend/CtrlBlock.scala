@@ -275,6 +275,12 @@ class CtrlBlockImp(outer: CtrlBlock)(implicit p: Parameters) extends LazyModuleI
     }))
   }
 
+  val io_wb_moniter = IO(Output(new BackendWBMoniter))
+  io_wb_moniter.valid := VecInit(io.writeback.map(writeback =>
+    writeback.map(_.valid).reduce(_||_)
+  )).reduce(_||_)
+
+
   val decode = Module(new DecodeStage)
   val rat = Module(new RenameTableWrapper)
   val ssit = Module(new SSIT)
@@ -333,8 +339,20 @@ class CtrlBlockImp(outer: CtrlBlock)(implicit p: Parameters) extends LazyModuleI
     io.frontend.toFtq.rob_commits(i).valid := RegNext(is_commit)
     io.frontend.toFtq.rob_commits(i).bits := RegEnable(rob.io.commits.info(i), is_commit)
   }
+
   io.frontend.toFtq.redirect.valid := frontendFlushValid || redirectGen.io.stage2Redirect.valid
   io.frontend.toFtq.redirect.bits := Mux(frontendFlushValid, frontendFlushBits, redirectGen.io.stage2Redirect.bits)
+
+  val io_commit_moniter = IO(Output(new BackendCommitMoniter))
+  val io_except_moniter = IO(Output(new BackendExcptMoniter))
+
+  io_commit_moniter.valid := RegNext(rob.io.commits.valid.reduce(_||_))
+  io_commit_moniter.data(0) := RegNext(Mux1H(rob.io.commits.valid, rob.io.commits.info.map(_.ftqIdx.value)))
+
+  io_except_moniter.valid := RegNext(rob.io.exception.valid)
+  io_except_moniter.data(0) := Cat(RegNext(rob.io.exception.bits.isInterrupt),
+                            RegNext(rob.io.exception.bits.uop.cf.exceptionVec).asUInt)
+
   // Be careful here:
   // T0: flushRedirect.valid, exception.valid
   // T1: csr.redirect.valid
@@ -426,6 +444,8 @@ class CtrlBlockImp(outer: CtrlBlock)(implicit p: Parameters) extends LazyModuleI
   rename.io.robCommits <> rob.io.commits
   rename.io.ssit <> ssit.io.rdata
   rename.io.waittable <> RegNext(waittable.io.rdata)
+
+
 
   // pipeline between rename and dispatch
   for (i <- 0 until RenameWidth) {

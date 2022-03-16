@@ -81,10 +81,6 @@ class XSTop()(implicit p: Parameters) extends BaseXSSoc() with HasSoCParameter
     })))
   )
 
-  val moniter = LazyModule(new XSMoniter())
-
-  misc.moniterTLNode := moniter.clientNode
-
   for (i <- 0 until NumCores) {
     core_with_l2(i).clint_int_sink := misc.clint.intnode
     core_with_l2(i).plic_int_sink :*= misc.plic.intnode
@@ -92,6 +88,7 @@ class XSTop()(implicit p: Parameters) extends BaseXSSoc() with HasSoCParameter
     misc.plic.intnode := IntBuffer() := core_with_l2(i).beu_int_source
     misc.peripheral_ports(i) := core_with_l2(i).uncache
     misc.core_to_l3_ports(i) :=* core_with_l2(i).memory_port
+    misc.moniterTLNode := core_with_l2(i).moniter
   }
 
   l3cacheOpt.map(_.ctlnode.map(_ := misc.peripheralXbar))

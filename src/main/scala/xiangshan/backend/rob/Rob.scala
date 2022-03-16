@@ -268,7 +268,7 @@ class Rob(implicit p: Parameters) extends LazyModule with HasWritebackSink with 
 }
 
 class RobImp(outer: Rob)(implicit p: Parameters) extends LazyModuleImp(outer)
-  with HasXSParameter with HasCircularQueuePtrHelper with HasPerfEvents {
+  with HasXSParameter with HasCircularQueuePtrHelper with HasPerfEvents{
   val wbExuConfigs = outer.writebackSinksParams.map(_.exuConfigs)
   val numWbPorts = wbExuConfigs.map(_.length)
 
