@@ -119,7 +119,7 @@ class CacheSubsystem()(implicit p: Parameters) extends LazyModule() {
     }
   val master_nodes = (0 until 1) map( i => createClientNode(s"master_node$i", 32))
 
-  l2Binder :*= l2cache.node :*= TLXbar() := master_nodes.head
+  l2Binder :*= l2cache.node :*= TLXbar() :*= TLBuffer() := master_nodes.head
 
   // lazy val module = new LazyRawModuleImp(this) {
   //   val io = IO(new Bundle {
