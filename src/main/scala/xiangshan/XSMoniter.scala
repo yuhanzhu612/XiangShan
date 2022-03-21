@@ -50,7 +50,7 @@ class XSMoniterImp(outer: XSMoniter) extends LazyModuleImp(outer)
   bus.b.ready := false.B
   bus.c.valid := false.B
   bus.c.bits  := DontCare
-  bus.d.ready := true.B
+  bus.d.ready := false.B
   bus.e.valid := false.B
   bus.e.bits  := DontCare
 
@@ -60,73 +60,41 @@ class XSMoniterImp(outer: XSMoniter) extends LazyModuleImp(outer)
   dontTouch(bus.a)
   dontTouch(bus.d)
 
+  dontTouch(io.frontend_signals)
+  dontTouch(io.commit_signals)
+  dontTouch(io.wb_signals)
+  dontTouch(io.excpt_signals)
 
-//  def generateReq(in : BaseMoniterSignal) = {
-//    val putAddr = (moniterDDRBase + in.offset * 4).U
-//    val putData = in.data
-//    val sendCnt = RegInit(in.transferNum.U)
-//
-//    val m_idle :: m_transfer :: m_finish :: Nil = Enum(3)
-//    val state   = RegInit(m_idle)
-//
-//    when(in.valid && state === m_idle){
-//      state := m_transfer
-//    }
-//
-//    when(state === m_transfer){
-//      bus.a.valid := true.B
-//      bus.a.bits  := edge.Put(
-//        fromSource = 0.U,
-//        toAddress = putAddr + ((in.transferNum.U - sendCnt)<<2),
-//        lgSize = 4.U,
-//        data = putData(in.transferNum.U - sendCnt))._2
-//
-//      when(sendCnt === 0.U){
-//        state := m_finish
-//      }.elsewhen(bus.a.fire()){
-//        sendCnt := sendCnt - 1.U
-//      }
-//    }
-//
-//    when(state === m_finish){
-//      sendCnt := in.transferNum.U
-//      state := m_idle
-//    }
-//  }
 
-//  generateReq(io.excpt_signals)
-//  generateReq(io.wb_signals)
-//  generateReq(io.commit_signals)
-//  generateReq(io.frontend_signals)
-val putAddr = moniterDDRBase.U//(moniterDDRBase + in.offset * 4).U
-val putData = RegNext(io.frontend_signals.data)
-val sendCnt = RegInit(io.frontend_signals.transferNum.U)
+  val putAddr = moniterDDRBase.U//(moniterDDRBase + in.offset * 4).U
+  val putData = RegNext(io.frontend_signals.data)
+  val sendCnt = RegInit(io.frontend_signals.transferNum.U)
 
-val m_idle :: m_transfer :: m_finish :: Nil = Enum(3)
-val state   = RegInit(m_idle)
+  val m_idle :: m_transfer :: m_finish :: Nil = Enum(3)
+  val state   = RegInit(m_idle)
 
-when(io.frontend_signals.valid && state === m_idle){
-  state := m_transfer
-}
-
-when(state === m_transfer){
-  bus.a.valid := true.B
-  bus.a.bits  := edge.Put(
-    fromSource = 0.U,
-    toAddress = putAddr + ((io.frontend_signals.transferNum.U - sendCnt)<<2),
-    lgSize = 4.U,
-    data = putData(io.frontend_signals.transferNum.U - sendCnt))._2
-
-  when(sendCnt === 0.U){
-    state := m_finish
-  }.elsewhen(bus.a.fire()){
-    sendCnt := sendCnt - 1.U
+  when(io.frontend_signals.valid && state === m_idle){
+    state := m_transfer
   }
-}
 
-when(state === m_finish){
-  sendCnt := io.frontend_signals.transferNum.U
-  state := m_idle
+  when(state === m_transfer){
+    bus.a.valid := false.B
+    bus.a.bits  := edge.Put(
+      fromSource = 0.U,
+      toAddress = putAddr + ((io.frontend_signals.transferNum.U - sendCnt)<<2),
+      lgSize = 2.U, //32 bit transform
+      data = putData(io.frontend_signals.transferNum.U - sendCnt))._2
+
+    when(sendCnt === 0.U){
+      state := m_finish
+    }.elsewhen(bus.a.fire()){
+      sendCnt := sendCnt - 1.U
+    }
+  }
+
+  when(state === m_finish){
+    sendCnt := io.frontend_signals.transferNum.U
+    state := m_idle
 }
 
 }
