@@ -107,7 +107,6 @@ jobs:
         run: |
           export HEAD_SHA=${{ github.run_number }}
           echo "NEMU_HOME=/nfs/home/share/ci-workloads/NEMU" >> $GITHUB_ENV
-          echo "AM_HOME=/nfs/home/share/ci-workloads/nexus-am" >> $GITHUB_ENV
           echo "PERF_HOME=/nfs/home/ci-runner/xs-perf/${HEAD_SHA}" >> $GITHUB_ENV
           echo "WAVE_HOME=/nfs/home/ci-runner/xs-wave/${HEAD_SHA}" >> $GITHUB_ENV
           mkdir -p /nfs/home/ci-runner/xs-perf/${HEAD_SHA}
@@ -118,43 +117,43 @@ jobs:
       - name: Build EMU
         run: |
           python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --build \
-            --dramsim3 /nfs/home/share/ci-workloads/DRAMsim3            \
-            --with-dramsim3 --threads 16
+            --dramsim3 /nfs/home/share/ci-workloads/DRAMsim3     \
+            --with-dramsim3 --threads 16 --spike
       - name: SPEC06 Test - mcf
         run: |
-          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci mcf 2> perf.log
+          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci mcf --spike 2> perf.log
           cat perf.log | sort | tee $PERF_HOME/mcf.log
       - name: SPEC06 Test - xalancbmk
         run: |
-          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci xalancbmk 2> perf.log
+          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci xalancbmk --spike 2> perf.log
           cat perf.log | sort | tee $PERF_HOME/xalancbmk.log
       - name: SPEC06 Test - gcc
         run: |
-          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci gcc 2> perf.log
+          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci gcc --spike 2> perf.log
           cat perf.log | sort | tee $PERF_HOME/gcc.log
       - name: SPEC06 Test - namd
         run: |
-          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci namd 2> perf.log
+          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci namd --spike 2> perf.log
           cat perf.log | sort | tee $PERF_HOME/namd.log
       - name: SPEC06 Test - milc
         run: |
-          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci milc 2> perf.log
+          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci milc --spike 2> perf.log
           cat perf.log | sort | tee $PERF_HOME/milc.log
       - name: SPEC06 Test - lbm
         run: |
-          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci lbm 2> perf.log
+          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci lbm --spike 2> perf.log
           cat perf.log | sort | tee $PERF_HOME/lbm.log
       - name: SPEC06 Test - gromacs
         run: |
-          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci gromacs 2> perf.log
+          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci gromacs --spike 2> perf.log
           cat perf.log | sort | tee $PERF_HOME/gromacs.log
       - name: SPEC06 Test - wrf
         run: |
-          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci wrf 2> perf.log
+          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci wrf --spike 2> perf.log
           cat perf.log | sort | tee $PERF_HOME/wrf.log
       - name: SPEC06 Test - astar
         run: |
-          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci astar 2> perf.log
+          python3 $GITHUB_WORKSPACE/scripts/xiangshan.py --wave-dump $WAVE_HOME --threads 16 --max-instr 5000000 --numa --ci astar --spike 2> perf.log
           cat perf.log | sort | tee $PERF_HOME/astar.log
   emu-mc:
     runs-on: bosc
