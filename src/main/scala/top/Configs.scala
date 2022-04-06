@@ -199,7 +199,8 @@ class WithNKBL2
   ways: Int = 8,
   inclusive: Boolean = true,
   banks: Int = 1,
-  alwaysReleaseData: Boolean = false
+  alwaysReleaseData: Boolean = false,
+  mshrs: Int = 30,
 ) extends Config((site, here, up) => {
   case XSTileKey =>
     val upParams = up(XSTileKey)
@@ -227,7 +228,7 @@ class WithNKBL2
     ))
 })
 
-class WithNKBL3(n: Int, ways: Int = 8, inclusive: Boolean = true, banks: Int = 1) extends Config((site, here, up) => {
+class WithNKBL3(n: Int, ways: Int = 8, inclusive: Boolean = true, banks: Int = 1, mshrs: Int = 14) extends Config((site, here, up) => {
   case SoCParamsKey =>
     val sets = n * 1024 / banks / ways / 64
     val tiles = site(XSTileKey)
@@ -238,6 +239,7 @@ class WithNKBL3(n: Int, ways: Int = 8, inclusive: Boolean = true, banks: Int = 1
         level = 3,
         ways = ways,
         sets = sets,
+        mshrs = mshrs,
         inclusive = inclusive,
         clientCaches = tiles.map{ core =>
           val l2params = core.L2CacheParamsOpt.get.toCacheParams
@@ -282,6 +284,13 @@ class MediumConfig(n: Int = 1) extends Config(
 class DefaultConfig(n: Int = 1) extends Config(
   new WithNKBL3(8 * 1024, inclusive = false, banks = 4, ways = 8)
     ++ new WithNKBL2(2 * 512, inclusive = false, banks = 4, alwaysReleaseData = true)
+    ++ new WithNKBL1D(128)
+    ++ new BaseConfig(n)
+)
+
+class CacheWarmupConfig(n: Int = 1) extends Config(
+  new WithNKBL3(4 * 1024, inclusive = false, banks = 8, ways = 8, mshrs = 30)
+    ++ new WithNKBL2(2 * 512, inclusive = false, banks = 4, alwaysReleaseData = true, mshrs = 30)
     ++ new WithNKBL1D(128)
     ++ new BaseConfig(n)
 )
