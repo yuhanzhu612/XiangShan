@@ -53,7 +53,7 @@ class MissReq(implicit p: Parameters) extends DCacheBundle {
   // * cancel is slow to generate, it will not be used until the last moment
   //
   // cancel may come from the following sources:
-  // 1. miss req blocked by writeback queue: 
+  // 1. miss req blocked by writeback queue:
   //      a writeback req of the same address is in progress
   // 2. pmp check failed
   val cancel = Bool() // cancel is slow to generate, it will cancel missreq.valid
@@ -481,10 +481,13 @@ class MissQueue(edge: TLEdgeOut)(implicit p: Parameters) extends DCacheModule wi
       val tag = UInt(tagBits.W) // paddr
     }))
   })
-  
+
   // 128KBL1: FIXME: provide vaddr for l2
 
   val entries = Seq.fill(cfg.nMissEntries)(Module(new MissEntry(edge)))
+  for ((entry, i) <- entries.zipWithIndex) {
+    TimeOutAssert(!entry.io.primary_ready, s"L1D MSHR $i timeout\n")
+  }
 
   val primary_ready_vec = entries.map(_.io.primary_ready)
   val secondary_ready_vec = entries.map(_.io.secondary_ready)
@@ -512,7 +515,7 @@ class MissQueue(edge: TLEdgeOut)(implicit p: Parameters) extends DCacheModule wi
     if (name.nonEmpty) { out.suggestName(s"${name.get}_select") }
     out.valid := Cat(in.map(_.valid)).orR
     out.bits := ParallelMux(in.map(_.valid) zip in.map(_.bits))
-    in.map(_.ready := out.ready) 
+    in.map(_.ready := out.ready)
     assert(!RegNext(out.valid && PopCount(Cat(in.map(_.valid))) > 1.U))
   }
 
@@ -521,15 +524,15 @@ class MissQueue(edge: TLEdgeOut)(implicit p: Parameters) extends DCacheModule wi
   entries.zipWithIndex.foreach {
     case (e, i) =>
       val former_primary_ready = if(i == 0)
-        false.B 
+        false.B
       else
         Cat((0 until i).map(j => entries(j).io.primary_ready)).orR
-      
+
       e.io.id := i.U
       e.io.req.valid := io.req.valid
-      e.io.primary_valid := io.req.valid && 
-        !merge && 
-        !reject && 
+      e.io.primary_valid := io.req.valid &&
+        !merge &&
+        !reject &&
         !former_primary_ready &&
         e.io.primary_ready
       e.io.req.bits := io.req.bits

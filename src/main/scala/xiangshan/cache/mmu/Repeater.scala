@@ -78,7 +78,7 @@ class PTWRepeater(Width: Int = 1)(implicit p: Parameters) extends XSModule with 
   XSDebug(req_in.valid || io.tlb.resp.valid, p"tlb: ${tlb}\n")
   XSDebug(io.ptw.req(0).valid || io.ptw.resp.valid, p"ptw: ${ptw}\n")
   assert(!RegNext(recv && io.ptw.resp.valid, init = false.B), "re-receive ptw.resp")
-  TimeOutAssert(sent && !recv, timeOutThreshold, "Repeater doesn't recv resp in time")
+  TimeOutAssert(sent && !recv, "Repeater doesn't recv resp in time")
 }
 
 /* dtlb
@@ -316,7 +316,7 @@ class PTWFilter(Width: Int, Size: Int)(implicit p: Parameters) extends XSModule 
   }
 
   for (i <- 0 until Size) {
-    TimeOutAssert(v(i), timeOutThreshold, s"Filter ${i} doesn't recv resp in time")
+    TimeOutAssert(v(i), s"Filter ${i} doesn't recv resp in time")
   }
 }
 

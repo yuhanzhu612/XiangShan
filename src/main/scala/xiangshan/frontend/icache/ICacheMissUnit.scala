@@ -293,6 +293,7 @@ class ICacheMissUnit(edge: TLEdgeOut)(implicit p: Parameters) extends ICacheMiss
     entry.io.req.valid := io.req(i).valid
     entry.io.req.bits  := io.req(i).bits
     io.req(i).ready    := entry.io.req.ready
+    TimeOutAssert(!entry.io.req.ready, s"L1I MSHR $i timeout\n")
 
     // entry resp
     meta_write_arb.io.in(i)     <>  entry.io.meta_write
@@ -361,6 +362,3 @@ class ICacheMissUnit(edge: TLEdgeOut)(implicit p: Parameters) extends ICacheMiss
   }
 
 }
-
-
-

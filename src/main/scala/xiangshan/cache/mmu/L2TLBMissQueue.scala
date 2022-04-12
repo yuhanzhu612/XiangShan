@@ -225,7 +225,7 @@ class L2TlbMissQueue(implicit p: Parameters) extends XSModule with HasPtwConst w
   XSPerfAccumulate("blocked_in", io.in.valid && !io.in.ready)
 
   for (i <- 0 until MSHRSize) {
-    TimeOutAssert(state(i) =/= state_idle, timeOutThreshold, s"missqueue time out no out ${i}")
+    TimeOutAssert(state(i) =/= state_idle, s"missqueue time out no out ${i}")
   }
 
   val perfEvents = Seq(

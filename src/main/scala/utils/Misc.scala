@@ -89,13 +89,13 @@ object Transpose
  * assert when 'signal' is true for more than 'threshold' cycles
  */
 object TimeOutAssert {
-  def apply(signal: Bool, threshold: Int, message: String): Unit = {
+  def apply(signal: Bool, message: String, threshold: Int = 200000): Unit = {
     val counter = RegInit(0.U(32.W))
     when (signal) {
       counter := counter + 1.U
     }.otherwise {
       counter := 0.U
     }
-    assert(counter <= threshold.U, message)
+    assert(counter <= threshold.U, s"9527: $message")
   }
 }

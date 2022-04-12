@@ -179,6 +179,7 @@ class StatusArray(params: RSParams)(implicit p: Parameters) extends XSModule
     val realUpdateValid = updateValid(i) && !io.redirect.valid
     statusNext.valid := !flushedVec(i) && (realUpdateValid || status.valid)
     XSError(updateValid(i) && status.valid, p"should not update a valid entry $i\n")
+    TimeOutAssert(status.valid, s"entry $i timeout\n", 40000)
 
     // scheduled: when the entry is scheduled for issue, mark it true.
     // Set when (1) scheduled for issue; (2) enq blocked.
@@ -200,14 +201,14 @@ class StatusArray(params: RSParams)(implicit p: Parameters) extends XSModule
     if (params.checkWaitBit) {
       val blockNotReleased = isAfter(statusNext.sqIdx, io.stIssuePtr)
       val storeAddrWaitforIsIssuing = VecInit((0 until StorePipelineWidth).map(i => {
-        io.memWaitUpdateReq.staIssue(i).valid && 
+        io.memWaitUpdateReq.staIssue(i).valid &&
         io.memWaitUpdateReq.staIssue(i).bits.uop.robIdx.value === statusNext.waitForRobIdx.value
       })).asUInt.orR && !statusNext.waitForStoreData && !statusNext.strictWait // is waiting for store addr ready
       val storeDataWaitforIsIssuing = VecInit((0 until StorePipelineWidth).map(i => {
-        io.memWaitUpdateReq.stdIssue(i).valid && 
+        io.memWaitUpdateReq.stdIssue(i).valid &&
         io.memWaitUpdateReq.stdIssue(i).bits.uop.sqIdx.value === statusNext.waitForSqIdx.value
       })).asUInt.orR && statusNext.waitForStoreData
-      statusNext.blocked := Mux(updateValid(i), updateVal(i).blocked, status.blocked) && 
+      statusNext.blocked := Mux(updateValid(i), updateVal(i).blocked, status.blocked) &&
         !storeAddrWaitforIsIssuing &&
         !storeDataWaitforIsIssuing &&
         blockNotReleased

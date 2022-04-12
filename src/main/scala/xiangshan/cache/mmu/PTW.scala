@@ -324,8 +324,8 @@ class PTWImp(outer: PTW)(implicit p: Parameters) extends PtwModule(outer) with H
 
   // time out assert
   for (i <- 0 until MemReqWidth) {
-    TimeOutAssert(waiting_resp(i), timeOutThreshold, s"ptw mem resp time out wait_resp${i}")
-    TimeOutAssert(flush_latch(i), timeOutThreshold, s"ptw mem resp time out flush_latch${i}")
+    TimeOutAssert(waiting_resp(i), s"ptw mem resp time out wait_resp${i}")
+    TimeOutAssert(flush_latch(i), s"ptw mem resp time out flush_latch${i}")
   }
 
 
