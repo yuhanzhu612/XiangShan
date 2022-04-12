@@ -47,8 +47,9 @@ class CacheWarmup(implicit p: Parameters) extends Module {
 
 object CacheWarmup extends App {
   // implicit val config : Parameters = new DefaultConfig()
-  implicit val config : Parameters = new CacheWarmupConfig()
-  XiangShanStage.execute(Array[String](), Seq(
+  val (config, firrtlOpts) = ArgParser.parse(args)
+  // implicit val config : Parameters = new CacheWarmupConfig()
+  XiangShanStage.execute(firrtlOpts, Seq(
     ChiselGeneratorAnnotation(() => {
       DisableMonitors(p => new CacheWarmup()(p))(config)
     })

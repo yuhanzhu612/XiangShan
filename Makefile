@@ -70,7 +70,8 @@ $(TOP_V): $(SCALA_FILE)
 
 verilog: $(TOP_V)
 
-SIM_TOP   = SimTop
+# SIM_TOP   = SimTop
+SIM_TOP   = CacheWarmup
 SIM_TOP_V = $(BUILD_DIR)/$(SIM_TOP).v
 $(SIM_TOP_V): $(SCALA_FILE) $(TEST_FILE)
 	mkdir -p $(@D)
@@ -88,13 +89,18 @@ $(SIM_TOP_V): $(SCALA_FILE) $(TEST_FILE)
 	@cat .__head__ .__diff__ $@ > .__out__
 	@mv .__out__ $@
 	@rm .__head__ .__diff__
-	sed -i -e 's/$$fatal/xs_assert(`__LINE__)/g' $(SIM_TOP_V)
+	# sed -i -e 's/$$fatal/xs_assert(`__LINE__)/g' $(SIM_TOP_V)
 
 sim-verilog: $(SIM_TOP_V)
 
 clean:
 	$(MAKE) -C ./difftest clean
 	rm -rf ./build
+
+cm-clean:
+	rm -f build/replayer.sh
+	rm -f build/*.v
+	rm -rf build/trace && mkdir -p build/trace
 
 init:
 	git submodule update --init
@@ -108,7 +114,7 @@ bsp:
 
 # verilator simulation
 emu:
-	$(MAKE) -C ./difftest emu SIM_TOP=SimTop DESIGN_DIR=$(NOOP_HOME) NUM_CORES=$(NUM_CORES)
+	$(MAKE) -C ./difftest emu SIM_TOP=CacheWarmup DESIGN_DIR=$(NOOP_HOME) NUM_CORES=$(NUM_CORES)
 
 emu-run:
 	$(MAKE) -C ./difftest emu-run SIM_TOP=SimTop DESIGN_DIR=$(NOOP_HOME) NUM_CORES=$(NUM_CORES)

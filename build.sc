@@ -16,12 +16,16 @@
 
 import os.Path
 import mill._
+import mill.define.Sources
+import mill.modules.Util
 import scalalib._
 import publish._
 import coursier.maven.MavenRepository
 import $file.`rocket-chip`.common
 import $file.`rocket-chip`.`api-config-chipsalliance`.`build-rules`.mill.build
 import $file.`rocket-chip`.hardfloat.build
+import $file.dependencies.chisel3.build
+import $file.dependencies.firrtl.build
 
 object ivys {
   val sv = "2.12.13"
@@ -32,10 +36,28 @@ object ivys {
   val macroParadise = ivy"org.scalamacros:::paradise:2.1.1"
 }
 
+val sv = "2.12.13"
+
+object myfirrtl extends dependencies.firrtl.build.firrtlCrossModule(sv) {
+  override def millSourcePath = os.pwd / "dependencies" / "firrtl"
+  override def ivyDeps = super.ivyDeps() ++ Agg(
+    ivy"com.lihaoyi::pprint:0.6.6"
+  )
+  override val checkSystemAntlr4Version = false
+  override val checkSystemProtocVersion = false
+}
+
+object mychisel3 extends dependencies.chisel3.build.chisel3CrossModule(sv) {
+  override def millSourcePath = os.pwd / "dependencies" / "chisel3"
+
+  def firrtlModule: Option[PublishModule] = Some(myfirrtl)
+}
+
+
 trait XSModule extends ScalaModule with PublishModule {
 
   // override this to use chisel from source
-  def chiselOpt: Option[PublishModule] = None
+  def chiselOpt: Option[PublishModule] = Some(mychisel3)
 
   override def scalaVersion = ivys.sv
 

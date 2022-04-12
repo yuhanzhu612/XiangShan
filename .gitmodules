@@ -13,3 +13,9 @@
 [submodule "fudian"]
 	path = fudian
 	url = https://github.com/OpenXiangShan/fudian.git
+[submodule "dependencies/chisel3"]
+	path = dependencies/chisel3
+	url = https://github.com/yqszxx/chisel3
+[submodule "dependencies/firrtl"]
+	path = dependencies/firrtl
+	url = git@github.com:shinezyy/firrtl.git

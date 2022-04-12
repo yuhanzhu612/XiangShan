@@ -13,6 +13,7 @@ import huancun.{HCCacheParamsKey, HuanCun, PrefetchField, PreferCacheField, Dirt
 import system.SoCParamsKey
 import utils.{BinaryArbiter, TLClientsMerger, TLEdgeBuffer}
 import xiangshan.XSTileKey
+import xstransforms.Dumper
 
 class CacheSubsystem()(implicit p: Parameters) extends LazyModule() {
   val L3BlockSize = p(SoCParamsKey).L3BlockSize

@@ -87,6 +87,7 @@ object ArgParser {
           }), tail)
         case option :: tail =>
           // unknown option, maybe a firrtl option, skip
+          println(s"Append $option to firrtlOpts")
           firrtlOpts :+= option
           nextOption(config, tail)
       }
