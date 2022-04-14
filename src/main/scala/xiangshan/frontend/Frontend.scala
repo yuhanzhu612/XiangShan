@@ -38,6 +38,7 @@ class Frontend()(implicit p: Parameters) extends LazyModule with HasXSParameter{
 class FrontendImp (outer: Frontend) extends LazyModuleImp(outer)
   with HasXSParameter
   with HasPerfEvents
+  with MoniterHelper
 {
   val io = IO(new Bundle() {
     val fencei = Input(Bool())
@@ -171,6 +172,11 @@ class FrontendImp (outer: Frontend) extends LazyModuleImp(outer)
   val pfevent = Module(new PFEvent)
   pfevent.io.distribute_csr := io.csrCtrl.distribute_csr
   val csrevents = pfevent.io.hpmevent.take(8)
+
+  override val signals = Seq(
+    ("pc is 0x10000000", ifu.io.toIbuffer.fire() && ifu.io.toIbuffer.bits.pc(0) === 0x10000000L.U)
+  )
+  genSignals
 
   val allPerfEvents = Seq(ifu, ibuffer, icache, ftq, bpu).flatMap(_.getPerf)
   override val perfEvents = HPerfMonitor(csrevents, allPerfEvents).getPerfEvents

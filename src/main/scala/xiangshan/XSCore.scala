@@ -230,6 +230,8 @@ abstract class XSCoreBase()(implicit p: config.Parameters) extends LazyModule
   val ctrlBlock = LazyModule(new CtrlBlock)
   val writebackSources = Seq(Seq(wb2Ctrl), Seq(wbArbiter))
   writebackSources.foreach(s => ctrlBlock.addWritebackSink(s))
+
+  val moniter = LazyModule(new XSMoniter())
 }
 
 class XSCore()(implicit p: config.Parameters) extends XSCoreBase
@@ -257,6 +259,9 @@ class XSCoreImp(outer: XSCoreBase) extends LazyModuleImp(outer)
   val ptw = outer.ptw.module
   val ptw_to_l2_buffer = outer.ptw_to_l2_buffer.module
   val exuBlocks = outer.exuBlocks.map(_.module)
+  val moniter = outer.moniter.module
+
+  moniter.io.frontend_signals := frontend.io_moniter(0)
 
   ctrlBlock.io.hartId := io.hartId
   exuBlocks.foreach(_.io.hartId := io.hartId)

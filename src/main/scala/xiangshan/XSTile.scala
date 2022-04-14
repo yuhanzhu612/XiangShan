@@ -51,6 +51,7 @@ class XSTileMisc()(implicit p: Parameters) extends LazyModule
 
   val i_mmio_port = TLTempNode()
   val d_mmio_port = TLTempNode()
+  val moniter_mmio_port = TLTempNode()
 
   busPMU := l1d_logger
   l1_xbar :=* busPMU
@@ -64,6 +65,7 @@ class XSTileMisc()(implicit p: Parameters) extends LazyModule
 
   mmio_xbar := TLBuffer.chainNode(2) := i_mmio_port
   mmio_xbar := TLBuffer.chainNode(2) := d_mmio_port
+  mmio_xbar := TLBuffer.chainNode(2) := moniter_mmio_port
   beu.node := TLBuffer.chainNode(1) := mmio_xbar
   mmio_port := TLBuffer() := mmio_xbar
 
@@ -123,6 +125,7 @@ class XSTile()(implicit p: Parameters) extends LazyModule
 
   misc.i_mmio_port := core.frontend.instrUncache.clientNode
   misc.d_mmio_port := core.memBlock.uncache.clientNode
+  misc.moniter_mmio_port := core.moniter.clientNode
 
   lazy val module = new LazyModuleImp(this){
     val io = IO(new Bundle {
